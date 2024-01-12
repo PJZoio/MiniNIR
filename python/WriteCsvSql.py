@@ -1,4 +1,4 @@
-#!/usr/bin/pythona3
+#!/usr/bin/python3
 # -*- coding:utf-8 -*-
 """
 A program to read data from the High-Precision-AD-HAT
