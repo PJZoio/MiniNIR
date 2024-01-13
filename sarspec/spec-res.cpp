@@ -42,6 +42,43 @@ namespace sarspec_test
     string outputFileName = "data";
     bool binaryFile = false;
     bool testLib = false;
+    float xCoeffs[3] = {0.0, 0.0, 0.0};
+
+    int parseStringToIntArray(string stringArray, int32_t* destination, int length)
+    {
+        string s = stringArray;
+        size_t pos = 0;
+        int i = 0;
+        while ((pos = s.find(";")) != string::npos) {
+            if(i >= length) {
+                cerr << "To many elements for the given array." << endl;
+                return EXIT_FAILURE;
+            }
+            destination[i] = atoi(s.substr(0, pos).c_str());
+            i++;
+            s.erase(0, pos + 1);
+        }
+        destination[i] = atoi(s.c_str()); // Get the last element
+        return EXIT_SUCCESS;
+    }
+    int parseStringToFloatArray(string stringArray, float* destination, int length)
+    {
+        string s = stringArray;
+        size_t pos = 0;
+        int i = 0;
+        while ((pos = s.find(";")) != string::npos) {
+            if(i >= length) {
+                cerr << "To many elements for the given array." << endl;
+                return EXIT_FAILURE;
+            }
+            destination[i] = atof(s.substr(0, pos).c_str());
+            i++;
+            s.erase(0, pos + 1);
+        }
+        destination[i] = atof(s.c_str()); // Get the last element
+        return EXIT_SUCCESS;
+    }
+
 
     void writeDataFile(FILE* oFile, int nPixels, double* xdata,
             double* ydata)
@@ -54,10 +91,22 @@ namespace sarspec_test
     int processInputs(int argc, char* argv[])
     {
         int c;
-        while ((c = getopt(argc, argv, "bf:i:lth")) != -1) {
+        while ((c = getopt(argc, argv, "bc:f:i:lth")) != -1) {
             switch (c) {
                 case 'b':
                     binaryFile = true;
+                    break;
+                case 'c':
+                    if(parseStringToFloatArray(optarg, xCoeffs, 3) != EXIT_SUCCESS) {
+                        cerr << "Error parsing Wavelength coefficients." << endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    for( int i = 3; i-- > 0; )
+                    {
+                        cout << i << ":"<< xCoeffs[i] << "; ";
+                        // Use i as normal here
+                    }
+                    cout << endl;
                     break;
                 case 'f':
                     outputFileName = optarg;
@@ -74,6 +123,7 @@ namespace sarspec_test
                 case 'h':
                     printf("All parameters are optional. If parameter is not specified then the default values will be used.\n \
                             -b - write Binary file\n \
+                            -c [FLOAT[3]] - Wavelength coefficients\n \
                             -f [STRING] - output File name\n \
                             -i [INT] - Integration time (ms) \n \
                             -l - test Lib\n \
