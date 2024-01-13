@@ -42,7 +42,7 @@ namespace sarspec_test
     string outputFileName = "data";
     bool binaryFile = false;
     bool testLib = false;
-    float xCoeffs[3] = {0.0, 0.0, 0.0};
+    float xCoeffs[4] = {0.0, 1.0, 0.0, 0.0};
 
     int parseStringToIntArray(string stringArray, int32_t* destination, int length)
     {
@@ -84,7 +84,7 @@ namespace sarspec_test
             double* ydata)
     {
         for (int i = 0; i < nPixels; ++i) {
-            fprintf(oFile, "%5.2f; %8.2f\n", xdata[i], ydata[i]);
+            fprintf(oFile, "%.3g; %.3g\n", xdata[i], ydata[i]);
         }
     }
 
@@ -97,16 +97,10 @@ namespace sarspec_test
                     binaryFile = true;
                     break;
                 case 'c':
-                    if(parseStringToFloatArray(optarg, xCoeffs, 3) != EXIT_SUCCESS) {
+                    if(parseStringToFloatArray(optarg, xCoeffs, 4) != EXIT_SUCCESS) {
                         cerr << "Error parsing Wavelength coefficients." << endl;
                         exit(EXIT_FAILURE);
                     }
-                    for( int i = 3; i-- > 0; )
-                    {
-                        cout << i << ":"<< xCoeffs[i] << "; ";
-                        // Use i as normal here
-                    }
-                    cout << endl;
                     break;
                 case 'f':
                     outputFileName = optarg;
@@ -146,7 +140,7 @@ namespace sarspec_test
                     -y - write binary file\n \
                     -z [INT] - DMA buffer size in kB\n \
                     */
-                    printf("e.g. %s -t\n", argv[0]);
+                    printf("e.g. %s -t -c \"4.0; 2.0; 3.2; 0.0\"\n", argv[0]);
 
                     exit(EXIT_SUCCESS);
                 default:
@@ -177,12 +171,12 @@ namespace sarspec_test
         }
         else
         {
-            if(connect[1]==0)  //STD
+            if(connect[1] == 0)  //STD
             {
                 nPixel = 2048;
                 cout << "spec std connected, nPixel:" << nPixel << endl;
             }
-            if(connect[1]==1)  //RES+
+            if(connect[1] == 1)  //RES+
             {
                 //cout << "spec res+ connected!!!" << endl;
                 nPixel = 3648;
@@ -217,8 +211,16 @@ namespace sarspec_test
 
         //𝑊𝑎𝑣𝑒𝑙𝑒𝑛𝑔𝑡h𝑃𝑖𝑥𝑒𝑙𝑁 = 𝐶0 + 𝐶1 𝑃𝑖𝑥𝑒𝑙𝑁 + 𝐶2 𝑃𝑖𝑥𝑒𝑙𝑁2 + 𝐶3 𝑃𝑖𝑥𝑒𝑙𝑁3
         //
-        clock_gettime(CLOCK_MONOTONIC, &startTime);
-        xdata = XData(0, 1, 0, 0);
+        double xC[4];
+        cout << "XData params. ";
+        for( int i = 0; i < 4; i++ )
+        {
+            xC[i] = xCoeffs[i];
+            cout << i << ":"<< xC[i] << "; ";
+        }
+        cout << endl;
+        //xdata = XData(0, 1, 0, 0);
+        xdata = XData(xC[0], xC[1], xC[2], xC[3]);
         /*
          * double* YData(bool TriggerIN, int TriggerInDelay )
          * *
@@ -230,6 +232,7 @@ namespace sarspec_test
          *       Interval between 0 and MAXINT.
          * @return EXIT_SUCCESS (0) if successful, EXIT_FAILURE (1) otherwise
          */
+        clock_gettime(CLOCK_MONOTONIC, &startTime);
         ydata = YData(extTrigger, 0);
         clock_gettime(CLOCK_MONOTONIC, &endTime);
         //End timer
@@ -261,8 +264,7 @@ namespace sarspec_test
             }
         }
         else {
-
-            outputFileN = outputFileName + ".dat";
+            outputFileN = outputFileName + ".csv";
             outputFile = fopen(outputFileN.c_str(), "w");
             if (outputFile != NULL) {
                 writeDataFile(outputFile, nPixel, xdata, ydata);
