@@ -1,7 +1,7 @@
 /*
  * atca-mimo32-v2-test.cpp
  *
- * Copyright (c) 2024-present,  IPFN-IST
+ * Copyright (c) 2024-present, Sarspec / IPFN-IST
  * All rights reserved.
  *
  * This source code is licensed under BSD-style license (found in the
@@ -20,7 +20,6 @@
 //#include <fstream>
 //#include "math.h"
 //#include "stdint.h"
-//#include <string.h>
 
 #include "libsarspec.h"
 
@@ -37,12 +36,19 @@ namespace sarspec_test
 
     int numberOfAcquisitionRounds = 0;
     int deviceNumber = 0;
+    /*
+     * Interval between 3 and 214500 milliseconds for SPEC RES+
+     * Interval between 2 and 214500 milliseconds for SPEC STD
+     */
     int integrationTime = 3;
+    int deviceGain = 1; // Interval between 1 and 500 units.
     bool extTrigger = false;
     string outputFileName = "data";
     bool binaryFile = false;
     bool testLib = false;
-    float xCoeffs[4] = {0.0, 1.0, 0.0, 0.0};
+//    float xCoeffs[4] = {0.0, 1.0, 0.0, 0.0};
+//   157.758,  (1050.7 -157.758)/3648.0
+    float xCoeffs[4] = {157.758, 0.24477576754, 0.0, 0.0};
 
     int parseStringToIntArray(string stringArray, int32_t* destination, int length)
     {
@@ -84,14 +90,14 @@ namespace sarspec_test
             double* ydata)
     {
         for (int i = 0; i < nPixels; ++i) {
-            fprintf(oFile, "%.3g; %.3g\n", xdata[i], ydata[i]);
+            fprintf(oFile, "%.3f; %.4g\n", xdata[i], ydata[i]);
         }
     }
 
     int processInputs(int argc, char* argv[])
     {
         int c;
-        while ((c = getopt(argc, argv, "bc:f:i:lth")) != -1) {
+        while ((c = getopt(argc, argv, "bc:f:g:i:lth")) != -1) {
             switch (c) {
                 case 'b':
                     binaryFile = true;
@@ -105,6 +111,9 @@ namespace sarspec_test
                 case 'f':
                     outputFileName = optarg;
                     break;
+                case 'g':
+                    deviceGain = atoi(optarg);
+                    break;
                 case 'i':
                     integrationTime = atoi(optarg);
                     break;
@@ -117,18 +126,16 @@ namespace sarspec_test
                 case 'h':
                     printf("All parameters are optional. If parameter is not specified then the default values will be used.\n \
                             -b - write Binary file\n \
-                            -c [FLOAT[3]] - Wavelength coefficients\n \
+                            -c [FLOAT[3]] - x-axis wavelength Coefficients\n \
                             -f [STRING] - output File name\n \
+                            -g [INT] - device Gain \n \
                             -i [INT] - Integration time (ms) \n \
                             -l - test Lib\n \
                             -t - use external Trigger\n \
-                            -h - print this help\n");
+                            -h - print this Help\n");
                     /*
                        -a - acquire Data at 2MSPS \
-                    // -a [INT] - number of acquisition rounds\n 
-                    -b [INT] - buffer size in MB\n \
-                    -d [INT] - device number \n \
-                    -g [INT] - hold samples. (mas 63) \n \
+                    // -a [INT] - number of acquisition rounds\n
                     -s - use software trigger\n \
                     -p [UINT] - chopper period, set to 0 to disable\n \
                     -o [STRING] - output file name\n \
@@ -140,7 +147,7 @@ namespace sarspec_test
                     -y - write binary file\n \
                     -z [INT] - DMA buffer size in kB\n \
                     */
-                    printf("e.g. %s -t -c \"4.0; 2.0; 3.2; 0.0\"\n", argv[0]);
+                    printf("e.g. %s -i 10 -c \"4.0; 2.0; 3.2; 0.0\"\n", argv[0]);
 
                     exit(EXIT_SUCCESS);
                 default:
@@ -174,13 +181,13 @@ namespace sarspec_test
             if(connect[1] == 0)  //STD
             {
                 nPixel = 2048;
-                cout << "spec std connected, nPixel:" << nPixel << endl;
+                cout << "\"spec std\" connected, nPixel:" << nPixel << endl;
             }
             if(connect[1] == 1)  //RES+
             {
                 //cout << "spec res+ connected!!!" << endl;
                 nPixel = 3648;
-                cout << "spec std connected, nPixel:" << nPixel << endl;
+                cout << "\"spec res+\" connected, nPixel:" << nPixel << endl;
             }
         }
         if(testLib)
@@ -189,18 +196,17 @@ namespace sarspec_test
             Disconnect();
             return EXIT_SUCCESS;
         }
-        //else 
+        //else
         //Get data
         //double *ydata = YData(true,0);
         bool ledOn = false;
-        for(int i = 0; i < 3; i++){
-            usleep(100000);
-            bool temp = LED(ledOn);
+        for(int i = 0; i < 4; i++){
+            usleep(200000);
+            LED(ledOn);
             ledOn = not ledOn;
         }
 
         temp = ChangeIntegrationTime(integrationTime);
-
         if(temp)
             cout << "Integration Time Changed to " << integrationTime << " ms." << endl;
         else
@@ -208,15 +214,26 @@ namespace sarspec_test
             cout << "ChangeIntegrationTime command Failed!" << endl;
             return EXIT_FAILURE;
         }
+        temp = SetDeviceGain(deviceGain);
+
+        if(temp)
+        {
+            cout << "Gain Changed to " << deviceGain << "." << endl;
+        }
+        else
+        {
+            cout << "Command Failed!" << endl;
+        }
 
         //𝑊𝑎𝑣𝑒𝑙𝑒𝑛𝑔𝑡h𝑃𝑖𝑥𝑒𝑙𝑁 = 𝐶0 + 𝐶1 𝑃𝑖𝑥𝑒𝑙𝑁 + 𝐶2 𝑃𝑖𝑥𝑒𝑙𝑁2 + 𝐶3 𝑃𝑖𝑥𝑒𝑙𝑁3
         //
         double xC[4];
-        cout << "XData params. ";
+        cout << "X-Axis scaling params. ";
         for( int i = 0; i < 4; i++ )
         {
             xC[i] = xCoeffs[i];
-            cout << i << ":"<< xC[i] << "; ";
+            //cout << i << ":"<< xC[i] << "; ";
+            cout << xC[i] << "; ";
         }
         cout << endl;
         //xdata = XData(0, 1, 0, 0);
@@ -237,17 +254,15 @@ namespace sarspec_test
         clock_gettime(CLOCK_MONOTONIC, &endTime);
         //End timer
         uint64_t timeDiff = timespecDiff(startTime, endTime);
-        cout << endl << "Read Time: "<< timeDiff/1000 << " ms" << endl;	
-
-        //bool temp = Disconnect();
+        cout << endl << "Read Time: "<< timeDiff/1000 << " ms" << endl;
 
         if(Disconnect())
         {
-            cout << "Device Disconnected!" << endl;	
+            cout << "Device Disconnected!" << endl;
         }
         else
         {
-            cout << "Disconnected Failed!" << endl;	
+            cout << "Disconnected Failed!" << endl;
             return EXIT_FAILURE;
         }
         if (binaryFile) {
@@ -271,11 +286,10 @@ namespace sarspec_test
                 fclose(outputFile);
             }
             else {
-                cerr << "Failed to open " <<  outputFileN << 
+                cerr << "Failed to open " <<  outputFileN <<
                     " output file: " << strerror(errno) << endl;
             }
         }
-
         return EXIT_SUCCESS;
     }
 }   //namespace sarspec_test
@@ -283,7 +297,6 @@ namespace sarspec_test
 int main(int argc, char* argv[])
 {
     return sarspec_test::runTest(argc, argv);
-
 }
 
-//  vim: syntax=cpp ts=4 sw=4 sts=4 sr et 
+//  vim: syntax=cpp ts=4 sw=4 sts=4 sr et
