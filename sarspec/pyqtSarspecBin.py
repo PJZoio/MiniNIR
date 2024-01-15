@@ -32,7 +32,8 @@ y = sparc_data[1]
 p1 = win.addPlot(title="Spectrum")
 p1.plot(x, y, pen=(255,0,0), name="Red curve")
 p1.setLabel('left', "Y Axis", units='Counts')
-p1.setLabel('bottom', "X Axis", units='Pixel')
+p1.setLabel('bottom', "Wavelength", units='nm')
+p1.showGrid(x=True, y=True)
 
 if __name__ == '__main__':
     pg.exec()
