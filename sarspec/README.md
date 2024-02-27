@@ -1,13 +1,17 @@
-# Software to read data from Sarspec Res+ Spectrographs on Linux
+# Software to read data from Sarspec Res+ Spectrographs on Linux arch x86_64
 
-## Install libftd2xx (see other instructions)  
-You may need to unload Linux standard system drivers
+## Install libftd2xx for x86_64 (see other instructions)  
+You may need to unload Linux standard OS drivers
 ```console
 sudo rmmod ftdi_sio
 sudo rmmod usbserial
 ```
 ## Compile and run Cpp program
-1. If needed, install [cmake](https://cmake.org) tool.
+1. If needed, install [cmake](https://cmake.org) tool:
+```console
+$ sudo apt update
+$ sudo apt-get install cmake
+```
 2. Run
 ```console
 $ mkdir build
